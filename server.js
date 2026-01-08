@@ -21,7 +21,8 @@ try {
     process.exit(1);
 }
 
-const OPENAI_API_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+//const OPENAI_API_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+const OPENAI_API_ENDPOINT = "https://openai-api-proxy-746164391621.us-west1.run.app";
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
 app.post('/api/', async (req, res) => {
