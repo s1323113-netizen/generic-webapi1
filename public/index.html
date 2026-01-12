@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tilt Draw Guess</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <h1>Tilt Draw Guess</h1>
+
+    <section class="card">
+      <div class="grid2">
+        <label>
+          ルームID
+          <input id="roomId" placeholder="例: abc123" />
+        </label>
+        <label>
+          名前
+          <input id="name" placeholder="20文字まで" />
+        </label>
+      </div>
+
+      <div class="grid2">
+        <button id="asDrawer" class="primary">描く人（Drawer）で入る</button>
+        <button id="asGuesser" class="primary">当てる人（Guesser）で入る</button>
+      </div>
+
+      <p class="note">
+        ※スマホで「描く人」をやると傾き操作できます。PCはマウスでも描けるようにしてあります。
+      </p>
+    </section>
+  </main>
+
+  <script>
+    const roomInput = document.getElementById('roomId');
+    const nameInput = document.getElementById('name');
+    const go = (role) => {
+      const roomId = roomInput.value.trim();
+      const name = nameInput.value.trim();
+      if (!roomId) { alert('ルームIDを入れて'); return; }
+      location.href = `./play.html?role=${encodeURIComponent(role)}&room=${encodeURIComponent(roomId)}&name=${encodeURIComponent(name)}`;
+    };
+    document.getElementById('asDrawer').onclick = () => go('drawer');
+    document.getElementById('asGuesser').onclick = () => go('guesser');
+  </script>
+</body>
+</html>

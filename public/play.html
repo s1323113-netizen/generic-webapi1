@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Play</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="topbar">
+      <div>
+        <div class="title">Tilt Draw Guess</div>
+        <div id="sub" class="sub"></div>
+      </div>
+      <a class="link" href="./index.html">戻る</a>
+    </header>
+
+    <section class="card">
+      <div class="row">
+        <div id="roleBadge" class="badge"></div>
+        <div id="roomBadge" class="badge"></div>
+        <div id="roundBadge" class="badge">Round: -</div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <h2>キャンバス</h2>
+          <canvas id="canvas" width="520" height="360"></canvas>
+
+          <div class="row">
+            <button id="clearBtn">消す</button>
+            <button id="startBtn" class="primary">ラウンド開始（描く人だけ）</button>
+            <button id="doneBtn" class="primary">描き終わり</button>
+          </div>
+
+          <p class="note" id="sensorNote"></p>
+        </div>
+
+        <div>
+          <h2>情報</h2>
+
+          <div id="drawerOnly" class="panel hidden">
+            <h3>お題（描く人だけ）</h3>
+            <div class="big" id="topicText">-</div>
+            <div class="muted" id="hintText"></div>
+            <div class="muted" id="diffText"></div>
+          </div>
+
+          <div id="guesserOnly" class="panel hidden">
+            <h3>解答（当てる人）</h3>
+            <input id="guessInput" placeholder="何の絵？" />
+            <button id="guessBtn" class="primary">AIに送信して判定</button>
+            <p class="muted">※描く人が「描き終わり」を押すと解答しやすい</p>
+          </div>
+
+          <div class="panel">
+            <h3>ログ</h3>
+            <pre id="log"></pre>
+          </div>
+
+          <div id="resultPanel" class="panel hidden">
+            <h3>結果</h3>
+            <div id="resultText"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="./play.js"></script>
+</body>
+</html>
