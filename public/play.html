@@ -26,10 +26,16 @@
       <div class="grid2">
         <div>
           <h2>キャンバス</h2>
-          <canvas id="canvas" width="520" height="360"></canvas>
+
+          <!-- ✅ wrap内にcanvas＋カーソルを重ねる -->
+          <div class="canvasWrap">
+            <canvas id="canvas"></canvas>
+            <div id="cursorDot" class="cursorDot hidden"></div>
+          </div>
 
           <div class="row">
             <button id="clearBtn">消す</button>
+            <button id="undoBtn">ひとつ戻す</button>
             <button id="startBtn" class="primary">ラウンド開始（描く人だけ）</button>
             <button id="doneBtn" class="primary">描き終わり</button>
           </div>
@@ -45,6 +51,30 @@
             <div class="big" id="topicText">-</div>
             <div class="muted" id="hintText"></div>
             <div class="muted" id="diffText"></div>
+
+            <div class="toolbar">
+              <button id="penToggleBtn" class="primary">ペンOFF（移動のみ）</button>
+              <span id="statusPen" class="badge">PEN: OFF</span>
+              <span id="colorInfo" class="badge">色: #111</span>
+
+              <div class="colors">
+                <button id="colBlack" class="chip">黒</button>
+                <button id="colRed" class="chip">赤</button>
+                <button id="colBlue" class="chip">青</button>
+                <button id="colGreen" class="chip">緑</button>
+                <button id="colYellow" class="chip">黄</button>
+                <button id="colPurple" class="chip">紫</button>
+                <button id="colCyan" class="chip">水</button>
+                <button id="colOrange" class="chip">橙</button>
+                <button id="colBrown" class="chip">茶</button>
+                <button id="colEraser" class="chip">消しゴム</button>
+
+                <label class="picker">
+                  <span class="muted">自由色</span>
+                  <input id="colorPicker" type="color" value="#111111" />
+                </label>
+              </div>
+            </div>
           </div>
 
           <div id="guesserOnly" class="panel hidden">

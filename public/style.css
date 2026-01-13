@@ -54,13 +54,7 @@ button.primary{
 }
 .hidden{ display:none; }
 .big{ font-size:20px; font-weight:700; margin:6px 0; }
-canvas{
-  width:100%;
-  max-width:520px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.94);
-}
+
 .topbar{
   display:flex;
   justify-content:space-between;
@@ -78,4 +72,115 @@ pre{
   border:1px solid rgba(255,255,255,.08);
   max-height:210px;
   overflow:auto;
+}
+
+/* ===== Canvas area ===== */
+
+/* キャンバスを画面に合わせて大きく */
+.canvasWrap {
+  width: 100%;
+  height: min(70vh, 520px);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative; /* ✅ カーソル重ねる */
+}
+
+/* canvasは親にフィット */
+#canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.94);
+
+  /* スマホ操作の要：スクロール/ズーム暴発を抑える */
+  touch-action: none;
+}
+
+/* ボタンが押せない問題の定番対策 */
+button, input {
+  touch-action: manipulation;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.colors {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.chip {
+  padding: 8px 10px;
+  border-radius: 999px;
+}
+
+/* ✅ カラーピッカー */
+.picker{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border-radius: 999px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+}
+.picker input[type="color"]{
+  width: 36px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+/* ✅ カーソル（ペン先の見える化） */
+.cursorDot{
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+
+  border: 2px solid rgba(0,0,0,.65);
+  box-shadow: 0 0 0 2px rgba(255,255,255,.75);
+  background: rgba(255,255,255,.15);
+
+  transform: translate(-9999px, -9999px);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* 描画中の見た目（少しだけ強調） */
+.cursorDot.drawing{
+  box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 0 18px rgba(255,255,255,.35);
+}
+
+/* ===== スマホ最適化：2列を1列にして、キャンバスを比率固定にする ===== */
+@media (max-width: 900px) {
+  .wrap { padding: 14px; }
+  .grid2 { grid-template-columns: 1fr; }  /* ←これが一番効く */
+
+  /* キャンバス：横幅に合わせて高さが決まる（細長くならない） */
+  .canvasWrap{
+    height: auto;           /* 70vhをやめる */
+    aspect-ratio: 4 / 3;    /* 好みで 16/9 や 1/1 でもOK */
+    max-height: 70vh;       /* 画面からはみ出し防止 */
+  }
+}
+
+/* さらに小さい端末（iPhone SEとか） */
+@media (max-width: 420px){
+  .canvasWrap{
+    aspect-ratio: 1 / 1;  /* 小画面は正方形の方が操作しやすいことが多い */
+  }
 }

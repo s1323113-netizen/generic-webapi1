@@ -7,6 +7,7 @@ const $ = (id) => document.getElementById(id);
 const logEl = $('log');
 const log = (...args) => {
   const s = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+  if (!logEl) return;
   logEl.textContent = (logEl.textContent + s + "\n").slice(-5000);
 };
 
@@ -26,19 +27,125 @@ socket.emit('joinRoom', { roomId, role, name });
 /* ===== Canvas ===== */
 const canvas = $('canvas');
 const ctx = canvas.getContext('2d');
+const cursorDot = $('cursorDot');
 
-let drawing = false;
+// ✅ 背景色（消しゴムの色）
+const CANVAS_BG = '#ffffff';
+
+// ✅ スマホに合わせてキャンバスを大きく・リサイズ追従（中身は保持）
+let snapshotDataUrl = null;
+
+function snapshotCanvas() {
+  try {
+    snapshotDataUrl = canvas.toDataURL('image/png');
+  } catch {
+    snapshotDataUrl = null;
+  }
+}
+
+function restoreSnapshot() {
+  if (!snapshotDataUrl) return;
+  const img = new Image();
+  img.onload = () => {
+    // CSSピクセル基準で描いてるので、そのまま 0,0 でOK
+    ctx.drawImage(img, 0, 0, canvas.clientWidth, canvas.clientHeight);
+  };
+  img.src = snapshotDataUrl;
+}
+
+function resizeCanvasToContainer() {
+  const wrap = canvas.parentElement; // .canvasWrap
+  const rect = wrap.getBoundingClientRect();
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+
+  canvas.width = Math.floor(rect.width * dpr);
+  canvas.height = Math.floor(rect.height * dpr);
+
+  // 以降はCSSピクセル基準で描ける
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // 背景を白で確定（消しゴム前提）
+  ctx.save();
+  ctx.fillStyle = CANVAS_BG;
+  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  ctx.restore();
+}
+
+window.addEventListener('resize', () => {
+  snapshotCanvas();
+  resizeCanvasToContainer();
+  restoreSnapshot();
+  // カーソルも更新
+  updateCursorDot();
+});
+
+// 初期
+resizeCanvasToContainer();
+
+/* ===== 状態 ===== */
+let penColor = '#111111';
+let penSize = 3;
+let eraser = false;
+
+// 傾き操作時：カーソルは常に動くが、「描くかどうか」はペンON/OFFで決める
+let penDown = false;
 let last = null;
+let cursor = { x: 100, y: 100 };
+let tilt = { beta: 0, gamma: 0 };
 
-// 描画データ（採点用）
+// 採点用
 let pointsAll = []; // {x,y,t,down}
 let strokesCount = 0;
 
-function clearCanvasLocal() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+// Undo用：各操作のスナップショット（重いので回数制限）
+const undoStack = [];
+const UNDO_LIMIT = 30;
+
+function pushUndo() {
+  try {
+    const url = canvas.toDataURL('image/png');
+    undoStack.push(url);
+    if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  } catch {
+    // 失敗したら諦める
+  }
 }
 
-function drawSegment(points, color = '#111', size = 3) {
+function applyUndo() {
+  const url = undoStack.pop();
+  if (!url) return;
+
+  // まず真っ白に
+  ctx.save();
+  ctx.fillStyle = CANVAS_BG;
+  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  ctx.restore();
+
+  const img = new Image();
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0, canvas.clientWidth, canvas.clientHeight);
+  };
+  img.src = url;
+}
+
+function clearCanvasLocal() {
+  ctx.save();
+  ctx.fillStyle = CANVAS_BG;
+  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  ctx.restore();
+}
+
+function getStrokeColor() {
+  return eraser ? CANVAS_BG : penColor;
+}
+function getStrokeSize() {
+  return eraser ? 18 : penSize;
+}
+
+function drawSegment(points, color, size) {
   if (!points || points.length < 2) return;
   ctx.strokeStyle = color;
   ctx.lineWidth = size;
@@ -53,99 +160,169 @@ function drawSegment(points, color = '#111', size = 3) {
 
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
-/* ===== Drawer操作（スマホ傾き or マウス） ===== */
+/* ===== カーソル表示（ペン色連動） ===== */
+function updateCursorDot() {
+  if (!cursorDot) return;
 
-let cursor = { x: canvas.width / 2, y: canvas.height / 2 };
-let tilt = { beta: 0, gamma: 0 }; // 前後/左右
+  if (role !== 'drawer') {
+    cursorDot.classList.add('hidden');
+    return;
+  }
+  cursorDot.classList.remove('hidden');
 
-function startStroke() {
-  drawing = true;
-  last = { ...cursor };
-  strokesCount++;
-  pointsAll.push({ x: cursor.x, y: cursor.y, t: Date.now(), down: 1 });
+  // 位置
+  const x = cursor.x;
+  const y = cursor.y;
+  cursorDot.style.transform = `translate(${x - 9}px, ${y - 9}px)`;
+  cursorDot.classList.toggle('drawing', penDown);
+
+  // ✅ 色連動
+  // ペン：外枠＆中心の色をペン色に
+  // 消しゴム：グレー表示で「消しゴム中」とわかる
+  if (eraser) {
+    cursorDot.style.borderColor = 'rgba(0,0,0,.65)';
+    cursorDot.style.background = 'rgba(200,200,200,.55)';
+    cursorDot.style.boxShadow = '0 0 0 2px rgba(255,255,255,.85)';
+  } else {
+    cursorDot.style.borderColor = penColor;
+    cursorDot.style.background = penColor + '33'; // 透明度付き（#RRGGBB33）
+    cursorDot.style.boxShadow = `0 0 0 2px rgba(255,255,255,.85)`;
+  }
 }
 
-function endStroke() {
-  drawing = false;
-  last = null;
-  pointsAll.push({ x: cursor.x, y: cursor.y, t: Date.now(), down: 0 });
+/* ===== 描画処理 ===== */
+function setPenDown(next) {
+  const prev = penDown;
+  penDown = !!next;
+
+  const status = $('statusPen');
+  if (status) status.textContent = penDown ? 'PEN: ON' : 'PEN: OFF';
+  const btn = $('penToggleBtn');
+  if (btn) btn.textContent = penDown ? 'ペンON（描画中）' : 'ペンOFF（移動のみ）';
+
+  // ONに切り替えた瞬間にUndoポイントを置く（ストローク開始前）
+  if (!prev && penDown) {
+    pushUndo();
+    strokesCount++;
+    last = { ...cursor };
+    pointsAll.push({ x: cursor.x, y: cursor.y, t: Date.now(), down: 1 });
+  }
+
+  if (prev && !penDown) {
+    last = null;
+    pointsAll.push({ x: cursor.x, y: cursor.y, t: Date.now(), down: 0 });
+  }
+
+  updateCursorDot();
 }
 
-function addPoint() {
+function addPointAndEmit() {
   const p = { x: cursor.x, y: cursor.y };
   if (last) {
-    drawSegment([last, p]);
-    socket.emit('stroke', { points: [last, p], color: '#111', size: 3 });
+    const color = getStrokeColor();
+    const size = getStrokeSize();
+    drawSegment([last, p], color, size);
+    socket.emit('stroke', { points: [last, p], color, size });
   }
   last = p;
-  pointsAll.push({ x: p.x, y: p.y, t: Date.now(), down: drawing ? 1 : 0 });
+  pointsAll.push({ x: p.x, y: p.y, t: Date.now(), down: penDown ? 1 : 0 });
+}
+
+// 端で減速（外に飛びにくく）
+function edgeDampen(pos, min, max) {
+  const margin = 20;
+  if (pos < min + margin) return 0.4;
+  if (pos > max - margin) return 0.4;
+  return 1.0;
 }
 
 function tickTiltDraw() {
   if (role !== 'drawer') return;
-  // 傾き→速度
-  const vx = clamp(tilt.gamma / 30, -1, 1) * 6; // 左右
-  const vy = clamp(tilt.beta / 30, -1, 1) * 6;  // 前後
 
-  cursor.x = clamp(cursor.x + vx, 0, canvas.width);
-  cursor.y = clamp(cursor.y + vy, 0, canvas.height);
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
 
-  // 描画中なら点追加
-  if (drawing) addPoint();
+  const vxRaw = clamp(tilt.gamma / 30, -1, 1) * 5;
+  const vyRaw = clamp(tilt.beta / 30, -1, 1) * 5;
+
+  const dampX = edgeDampen(cursor.x, 0, w);
+  const dampY = edgeDampen(cursor.y, 0, h);
+
+  cursor.x = clamp(cursor.x + vxRaw * dampX, 0, w);
+  cursor.y = clamp(cursor.y + vyRaw * dampY, 0, h);
+
+  if (penDown) addPointAndEmit();
+  updateCursorDot();
 
   requestAnimationFrame(tickTiltDraw);
 }
 
 function enableSensor() {
-  $('sensorNote').textContent = 'スマホ傾きでカーソル移動。画面タップで描画ON/OFF。';
-  requestAnimationFrame(tickTiltDraw);
+  $('sensorNote').textContent =
+    'スマホ：傾きでカーソル移動。ペンON/OFFボタンで描画。';
 
   window.addEventListener('deviceorientation', (e) => {
-    // iOSは許可が必要（下のボタンで対応）
     tilt.beta = e.beta ?? 0;
     tilt.gamma = e.gamma ?? 0;
   }, true);
 
-// キャンバスだけタップで描画ON/OFF（ボタンや入力を殺さない）
-canvas.addEventListener('touchstart', (e) => {
-  if (role !== 'drawer') return;
+  cursor.x = canvas.clientWidth / 2;
+  cursor.y = canvas.clientHeight / 2;
+  updateCursorDot();
 
-  // iOSでスクロール/ズーム等を抑えて、キャンバス操作だけ優先
-  e.preventDefault();
-
-  if (!drawing) startStroke();
-  else endStroke();
-}, { passive: false });
+  requestAnimationFrame(tickTiltDraw);
+}
 
 function enableMouseFallback() {
   $('sensorNote').textContent = 'PC用：マウスで描画できます。';
-  canvas.addEventListener('mousedown', (e) => {
+
+  let drawing = false;
+
+  canvas.addEventListener('pointerdown', (e) => {
     if (role !== 'drawer') return;
+
+    // PC/マウスは通常描画、スマホは傾き優先（touchは無視）
+    if (e.pointerType === 'touch') return;
+
+    pushUndo();
     drawing = true;
     strokesCount++;
+
     const r = canvas.getBoundingClientRect();
-    cursor.x = e.clientX - r.left;
-    cursor.y = e.clientY - r.top;
+    cursor.x = clamp(e.clientX - r.left, 0, canvas.clientWidth);
+    cursor.y = clamp(e.clientY - r.top, 0, canvas.clientHeight);
     last = { x: cursor.x, y: cursor.y };
     pointsAll.push({ x: cursor.x, y: cursor.y, t: Date.now(), down: 1 });
+
+    updateCursorDot();
+    canvas.setPointerCapture(e.pointerId);
   });
-  canvas.addEventListener('mousemove', (e) => {
+
+  canvas.addEventListener('pointermove', (e) => {
     if (role !== 'drawer' || !drawing) return;
+
     const r = canvas.getBoundingClientRect();
-    cursor.x = e.clientX - r.left;
-    cursor.y = e.clientY - r.top;
-    addPoint();
+    cursor.x = clamp(e.clientX - r.left, 0, canvas.clientWidth);
+    cursor.y = clamp(e.clientY - r.top, 0, canvas.clientHeight);
+
+    addPointAndEmit();
+    updateCursorDot();
   });
-  window.addEventListener('mouseup', () => {
+
+  canvas.addEventListener('pointerup', () => {
     if (role !== 'drawer') return;
-    if (drawing) endStroke();
+    if (!drawing) return;
+    drawing = false;
+    last = null;
+    pointsAll.push({ x: cursor.x, y: cursor.y, t: Date.now(), down: 0 });
+    updateCursorDot();
   });
 }
 
 async function requestIOSPermissionIfNeeded() {
-  // iOS 13+ は DeviceOrientationEvent.requestPermission が必要
   if (typeof DeviceOrientationEvent !== 'undefined' &&
       typeof DeviceOrientationEvent.requestPermission === 'function') {
+
     const btn = document.createElement('button');
     btn.textContent = 'iPhone: センサー許可';
     btn.className = 'primary';
@@ -168,9 +345,8 @@ async function requestIOSPermissionIfNeeded() {
   }
 }
 
-/* ===== 採点（絵のうまさ）※簡易ヒューリスティック ===== */
+/* ===== 採点 ===== */
 function computeDrawingScore() {
-  // めちゃ簡易：線の長さ/範囲/ストローク数で0-100
   if (pointsAll.length < 10) return 0;
 
   let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
@@ -184,14 +360,13 @@ function computeDrawingScore() {
 
     if (a.down && b.down) {
       const dx = b.x - a.x, dy = b.y - a.y;
-      dist += Math.sqrt(dx*dx + dy*dy);
+      dist += Math.sqrt(dx * dx + dy * dy);
     }
   }
   const area = (maxX - minX) * (maxY - minY);
-  const areaNorm = clamp(area / (canvas.width * canvas.height), 0, 1);
-
-  const distNorm = clamp(dist / 2000, 0, 1);       // 2000pxくらい描けたら十分
-  const strokeNorm = clamp(strokesCount / 6, 0, 1); // ストローク多すぎも微妙だが簡易
+  const areaNorm = clamp(area / (canvas.clientWidth * canvas.clientHeight), 0, 1);
+  const distNorm = clamp(dist / 2000, 0, 1);
+  const strokeNorm = clamp(strokesCount / 6, 0, 1);
 
   const score = Math.round((areaNorm * 40) + (distNorm * 40) + (strokeNorm * 20));
   return clamp(score, 0, 100);
@@ -199,11 +374,24 @@ function computeDrawingScore() {
 
 /* ===== UI buttons ===== */
 $('clearBtn').onclick = () => {
+  pushUndo();
   clearCanvasLocal();
   pointsAll = [];
   strokesCount = 0;
-  socket.emit('stroke', { points: [], clear: true }); // 互換用（受信側でclear扱い）
+  socket.emit('stroke', { points: [], clear: true });
 };
+
+const undoBtn = $('undoBtn');
+if (undoBtn) {
+  undoBtn.onclick = () => {
+    applyUndo();
+    // ついでに「線の評価用」ログは完全復元できないので、最低限リセット寄りに
+    last = null;
+    // pointsAll は厳密には戻せないので残すより「安全に」弱めにリセット
+    pointsAll.push({ x: cursor.x, y: cursor.y, t: Date.now(), down: 0 });
+    updateCursorDot();
+  };
+}
 
 $('startBtn').onclick = () => socket.emit('startRound');
 
@@ -220,6 +408,51 @@ $('guessBtn').onclick = () => {
   const drawingScore = Number(window.__lastDrawingScore ?? 0);
   socket.emit('submitGuess', { guess, drawingScore });
 };
+
+// ✅ ペンON/OFFボタン
+const penBtn = $('penToggleBtn');
+if (penBtn) {
+  penBtn.onclick = () => setPenDown(!penDown);
+}
+
+// ✅ 色切替（ボタン群）
+function setTool({ color, isEraser }) {
+  eraser = !!isEraser;
+  if (!eraser && color) penColor = color;
+
+  const info = $('colorInfo');
+  if (info) info.textContent = eraser ? '消しゴム' : `色: ${penColor}`;
+
+  // カーソル色も即反映
+  updateCursorDot();
+}
+
+function bindColorBtn(id, color) {
+  const el = $(id);
+  if (!el) return;
+  el.onclick = () => setTool({ color, isEraser: false });
+}
+
+bindColorBtn('colBlack',  '#111111');
+bindColorBtn('colRed',    '#e11d48');
+bindColorBtn('colBlue',   '#2563eb');
+bindColorBtn('colGreen',  '#16a34a');
+bindColorBtn('colYellow', '#facc15');
+bindColorBtn('colPurple', '#a855f7');
+bindColorBtn('colCyan',   '#06b6d4');
+bindColorBtn('colOrange', '#f97316');
+bindColorBtn('colBrown',  '#8b5a2b');
+
+const er = $('colEraser');
+if (er) er.onclick = () => setTool({ isEraser: true });
+
+// ✅ カラーピッカー（自由色）
+const picker = $('colorPicker');
+if (picker) {
+  picker.addEventListener('input', () => {
+    setTool({ color: picker.value, isEraser: false });
+  });
+}
 
 /* ===== Socket events ===== */
 socket.on('errorMessage', (m) => log('ERROR:', m));
@@ -282,16 +515,21 @@ socket.on('roundResult', (r) => {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) =>
-    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
   );
 }
 
-/* ===== 起動時：描く人はセンサー、だめならマウス ===== */
+/* ===== 起動時 ===== */
 if (role === 'drawer') {
-  // iPhoneなら許可ボタンが出る
-  requestIOSPermissionIfNeeded();
-  // PCやセンサー無しの保険
-  enableMouseFallback();
+  requestIOSPermissionIfNeeded(); // スマホは許可後 enableSensor()
+  enableMouseFallback();          // PC保険
+  setPenDown(false);              // 初期OFF（傾けただけで線が出ない）
+  setTool({ color: '#111111', isEraser: false });
+  // 初期カーソル位置
+  cursor.x = canvas.clientWidth / 2;
+  cursor.y = canvas.clientHeight / 2;
+  updateCursorDot();
 } else {
   $('sensorNote').textContent = '当てる人はキャンバスを見るだけ。';
-}}
+  if (cursorDot) cursorDot.classList.add('hidden');
+}
