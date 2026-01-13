@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Play</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
@@ -27,8 +27,7 @@
         <div>
           <h2>キャンバス</h2>
 
-          <!-- ✅ wrap内にcanvas＋カーソルを重ねる -->
-          <div class="canvasWrap">
+          <div class="canvasWrap" id="canvasWrap">
             <canvas id="canvas"></canvas>
             <div id="cursorDot" class="cursorDot hidden"></div>
           </div>
@@ -97,6 +96,9 @@
       </div>
     </section>
   </main>
+
+  <!-- ✅ 正解時だけ紙吹雪（軽いCDN） -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="./play.js"></script>

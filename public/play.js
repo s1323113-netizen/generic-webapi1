@@ -29,28 +29,27 @@ const canvas = $('canvas');
 const ctx = canvas.getContext('2d');
 const cursorDot = $('cursorDot');
 
-// ✅ 背景色（消しゴムの色）
+// 背景色（消しゴム色）
 const CANVAS_BG = '#ffffff';
 
-// ✅ スマホに合わせてキャンバスを大きく・リサイズ追従（中身は保持）
+// 画面回転/リサイズで絵を保つ
 let snapshotDataUrl = null;
-
 function snapshotCanvas() {
-  try {
-    snapshotDataUrl = canvas.toDataURL('image/png');
-  } catch {
-    snapshotDataUrl = null;
-  }
+  try { snapshotDataUrl = canvas.toDataURL('image/png'); }
+  catch { snapshotDataUrl = null; }
 }
-
 function restoreSnapshot() {
   if (!snapshotDataUrl) return;
   const img = new Image();
-  img.onload = () => {
-    // CSSピクセル基準で描いてるので、そのまま 0,0 でOK
-    ctx.drawImage(img, 0, 0, canvas.clientWidth, canvas.clientHeight);
-  };
+  img.onload = () => ctx.drawImage(img, 0, 0, canvas.clientWidth, canvas.clientHeight);
   img.src = snapshotDataUrl;
+}
+
+function fillBackground() {
+  ctx.save();
+  ctx.fillStyle = CANVAS_BG;
+  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  ctx.restore();
 }
 
 function resizeCanvasToContainer() {
@@ -64,21 +63,14 @@ function resizeCanvasToContainer() {
   canvas.width = Math.floor(rect.width * dpr);
   canvas.height = Math.floor(rect.height * dpr);
 
-  // 以降はCSSピクセル基準で描ける
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  // 背景を白で確定（消しゴム前提）
-  ctx.save();
-  ctx.fillStyle = CANVAS_BG;
-  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-  ctx.restore();
+  fillBackground();
 }
 
 window.addEventListener('resize', () => {
   snapshotCanvas();
   resizeCanvasToContainer();
   restoreSnapshot();
-  // カーソルも更新
   updateCursorDot();
 });
 
@@ -90,17 +82,16 @@ let penColor = '#111111';
 let penSize = 3;
 let eraser = false;
 
-// 傾き操作時：カーソルは常に動くが、「描くかどうか」はペンON/OFFで決める
 let penDown = false;
 let last = null;
 let cursor = { x: 100, y: 100 };
 let tilt = { beta: 0, gamma: 0 };
 
 // 採点用
-let pointsAll = []; // {x,y,t,down}
+let pointsAll = [];
 let strokesCount = 0;
 
-// Undo用：各操作のスナップショット（重いので回数制限）
+// Undo（軽くするため回数制限）
 const undoStack = [];
 const UNDO_LIMIT = 30;
 
@@ -109,33 +100,22 @@ function pushUndo() {
     const url = canvas.toDataURL('image/png');
     undoStack.push(url);
     if (undoStack.length > UNDO_LIMIT) undoStack.shift();
-  } catch {
-    // 失敗したら諦める
-  }
+  } catch {}
 }
 
 function applyUndo() {
   const url = undoStack.pop();
   if (!url) return;
 
-  // まず真っ白に
-  ctx.save();
-  ctx.fillStyle = CANVAS_BG;
-  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-  ctx.restore();
+  fillBackground();
 
   const img = new Image();
-  img.onload = () => {
-    ctx.drawImage(img, 0, 0, canvas.clientWidth, canvas.clientHeight);
-  };
+  img.onload = () => ctx.drawImage(img, 0, 0, canvas.clientWidth, canvas.clientHeight);
   img.src = url;
 }
 
 function clearCanvasLocal() {
-  ctx.save();
-  ctx.fillStyle = CANVAS_BG;
-  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-  ctx.restore();
+  fillBackground();
 }
 
 function getStrokeColor() {
@@ -160,7 +140,7 @@ function drawSegment(points, color, size) {
 
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
-/* ===== カーソル表示（ペン色連動） ===== */
+/* ===== カーソル表示 ===== */
 function updateCursorDot() {
   if (!cursorDot) return;
 
@@ -170,23 +150,17 @@ function updateCursorDot() {
   }
   cursorDot.classList.remove('hidden');
 
-  // 位置
-  const x = cursor.x;
-  const y = cursor.y;
-  cursorDot.style.transform = `translate(${x - 9}px, ${y - 9}px)`;
+  cursorDot.style.transform = `translate(${cursor.x - 9}px, ${cursor.y - 9}px)`;
   cursorDot.classList.toggle('drawing', penDown);
 
-  // ✅ 色連動
-  // ペン：外枠＆中心の色をペン色に
-  // 消しゴム：グレー表示で「消しゴム中」とわかる
   if (eraser) {
     cursorDot.style.borderColor = 'rgba(0,0,0,.65)';
     cursorDot.style.background = 'rgba(200,200,200,.55)';
     cursorDot.style.boxShadow = '0 0 0 2px rgba(255,255,255,.85)';
   } else {
     cursorDot.style.borderColor = penColor;
-    cursorDot.style.background = penColor + '33'; // 透明度付き（#RRGGBB33）
-    cursorDot.style.boxShadow = `0 0 0 2px rgba(255,255,255,.85)`;
+    cursorDot.style.background = penColor + '33';
+    cursorDot.style.boxShadow = '0 0 0 2px rgba(255,255,255,.85)';
   }
 }
 
@@ -200,7 +174,6 @@ function setPenDown(next) {
   const btn = $('penToggleBtn');
   if (btn) btn.textContent = penDown ? 'ペンON（描画中）' : 'ペンOFF（移動のみ）';
 
-  // ONに切り替えた瞬間にUndoポイントを置く（ストローク開始前）
   if (!prev && penDown) {
     pushUndo();
     strokesCount++;
@@ -228,7 +201,6 @@ function addPointAndEmit() {
   pointsAll.push({ x: p.x, y: p.y, t: Date.now(), down: penDown ? 1 : 0 });
 }
 
-// 端で減速（外に飛びにくく）
 function edgeDampen(pos, min, max) {
   const margin = 20;
   if (pos < min + margin) return 0.4;
@@ -280,8 +252,6 @@ function enableMouseFallback() {
 
   canvas.addEventListener('pointerdown', (e) => {
     if (role !== 'drawer') return;
-
-    // PC/マウスは通常描画、スマホは傾き優先（touchは無視）
     if (e.pointerType === 'touch') return;
 
     pushUndo();
@@ -385,9 +355,7 @@ const undoBtn = $('undoBtn');
 if (undoBtn) {
   undoBtn.onclick = () => {
     applyUndo();
-    // ついでに「線の評価用」ログは完全復元できないので、最低限リセット寄りに
     last = null;
-    // pointsAll は厳密には戻せないので残すより「安全に」弱めにリセット
     pointsAll.push({ x: cursor.x, y: cursor.y, t: Date.now(), down: 0 });
     updateCursorDot();
   };
@@ -409,13 +377,11 @@ $('guessBtn').onclick = () => {
   socket.emit('submitGuess', { guess, drawingScore });
 };
 
-// ✅ ペンON/OFFボタン
 const penBtn = $('penToggleBtn');
 if (penBtn) {
   penBtn.onclick = () => setPenDown(!penDown);
 }
 
-// ✅ 色切替（ボタン群）
 function setTool({ color, isEraser }) {
   eraser = !!isEraser;
   if (!eraser && color) penColor = color;
@@ -423,7 +389,6 @@ function setTool({ color, isEraser }) {
   const info = $('colorInfo');
   if (info) info.textContent = eraser ? '消しゴム' : `色: ${penColor}`;
 
-  // カーソル色も即反映
   updateCursorDot();
 }
 
@@ -446,12 +411,29 @@ bindColorBtn('colBrown',  '#8b5a2b');
 const er = $('colEraser');
 if (er) er.onclick = () => setTool({ isEraser: true });
 
-// ✅ カラーピッカー（自由色）
 const picker = $('colorPicker');
 if (picker) {
   picker.addEventListener('input', () => {
     setTool({ color: picker.value, isEraser: false });
   });
+}
+
+/* ===== 紙吹雪 ===== */
+function fireConfetti() {
+  if (typeof confetti !== 'function') return;
+
+  const duration = 1200;
+  const end = Date.now() + duration;
+
+  (function frame() {
+    confetti({
+      particleCount: 6,
+      spread: 70,
+      startVelocity: 35,
+      origin: { x: Math.random() * 0.2 + 0.4, y: 0.2 }
+    });
+    if (Date.now() < end) requestAnimationFrame(frame);
+  })();
 }
 
 /* ===== Socket events ===== */
@@ -498,6 +480,7 @@ socket.on('drawingFinished', ({ drawingScore }) => {
 
 socket.on('roundResult', (r) => {
   $('resultPanel').classList.remove('hidden');
+
   $('resultText').innerHTML = `
     <div class="big">お題：${escapeHtml(r.topic)}</div>
     <div>あなたの解答：${escapeHtml(r.guess)}</div>
@@ -511,6 +494,9 @@ socket.on('roundResult', (r) => {
     <div class="muted">正規化: topic=${escapeHtml(r.normalized_topic || '')} / guess=${escapeHtml(r.normalized_guess || '')}</div>
   `;
   log('結果', r);
+
+  // ✅ 正解時だけ紙吹雪
+  if (r.correct) fireConfetti();
 });
 
 function escapeHtml(s) {
@@ -521,11 +507,10 @@ function escapeHtml(s) {
 
 /* ===== 起動時 ===== */
 if (role === 'drawer') {
-  requestIOSPermissionIfNeeded(); // スマホは許可後 enableSensor()
-  enableMouseFallback();          // PC保険
-  setPenDown(false);              // 初期OFF（傾けただけで線が出ない）
+  requestIOSPermissionIfNeeded();
+  enableMouseFallback();
+  setPenDown(false);
   setTool({ color: '#111111', isEraser: false });
-  // 初期カーソル位置
   cursor.x = canvas.clientWidth / 2;
   cursor.y = canvas.clientHeight / 2;
   updateCursorDot();

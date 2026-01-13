@@ -1,59 +1,235 @@
-:root { --bg:#0b0d12; --card:#141826; --text:#e8ecff; --muted:#aab3d6; --accent:#7aa2ff; }
+/* =========================
+   POP THEME (replace all)
+========================= */
+:root{
+  --bg1:#0b1026;
+  --bg2:#1a0b2e;
+
+  --text:#f7f8ff;
+  --muted:#c9cff6;
+
+  --card: rgba(255,255,255,.10);
+  --card2: rgba(255,255,255,.06);
+  --border: rgba(255,255,255,.18);
+
+  --accent:#7aa2ff;   /* blue */
+  --pink:#ff4fd8;
+  --mint:#2efbd5;
+  --yellow:#ffe66b;
+  --orange:#ff944d;
+
+  --shadow: 0 18px 60px rgba(0,0,0,.45);
+  --radius: 18px;
+}
+
 *{ box-sizing:border-box; }
+html, body{ height:100%; }
+
 body{
-  margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
-  background: radial-gradient(900px 600px at 20% 10%, #1a2040 0%, var(--bg) 60%);
+  margin:0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
   color:var(--text);
+
+  /* POP background */
+  background:
+    radial-gradient(900px 600px at 10% 10%, rgba(255,79,216,.35) 0%, transparent 60%),
+    radial-gradient(900px 600px at 90% 20%, rgba(46,251,213,.28) 0%, transparent 60%),
+    radial-gradient(900px 600px at 50% 100%, rgba(122,162,255,.25) 0%, transparent 60%),
+    linear-gradient(140deg, var(--bg1), var(--bg2));
+  overflow-x:hidden;
 }
-.wrap{ max-width:1100px; margin:0 auto; padding:20px; }
-h1{ margin:10px 0 18px; }
+
+.wrap{
+  max-width:1100px;
+  margin:0 auto;
+  padding:20px;
+}
+
+/* little floating sparkle dots */
+.wrap::before{
+  content:"";
+  position:fixed;
+  inset:-40px;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 12% 20%, rgba(255,230,107,.22) 0 3px, transparent 4px),
+    radial-gradient(circle at 72% 12%, rgba(46,251,213,.18) 0 2px, transparent 3px),
+    radial-gradient(circle at 88% 64%, rgba(255,79,216,.16) 0 3px, transparent 4px),
+    radial-gradient(circle at 20% 78%, rgba(122,162,255,.16) 0 2px, transparent 3px);
+  filter: blur(.2px);
+  opacity:.9;
+  animation: floaty 10s ease-in-out infinite;
+}
+
+@keyframes floaty{
+  0%,100%{ transform: translate3d(0,0,0); }
+  50%{ transform: translate3d(0,-10px,0); }
+}
+
+h1, h2{
+  margin:10px 0 14px;
+  letter-spacing:.2px;
+}
+h1{
+  font-weight:900;
+  font-size: clamp(28px, 4vw, 40px);
+  background: linear-gradient(90deg, var(--mint), var(--pink), var(--yellow));
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  text-shadow: 0 8px 30px rgba(255,79,216,.15);
+}
+h2{
+  font-weight:900;
+}
+
+/* ===== Card ===== */
 .card{
-  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-  border:1px solid rgba(255,255,255,0.08);
-  border-radius:16px;
+  position:relative;
+  background: linear-gradient(180deg, var(--card), var(--card2));
+  border:1px solid var(--border);
+  border-radius: var(--radius);
   padding:16px;
-  box-shadow: 0 10px 40px rgba(0,0,0,.35);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  overflow:hidden;
 }
-.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-.row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0; }
-label{ display:flex; flex-direction:column; gap:6px; color:var(--muted); }
+
+/* neon border sheen */
+.card::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  border-radius: calc(var(--radius) + 2px);
+  background: linear-gradient(120deg,
+    rgba(46,251,213,.35),
+    rgba(255,79,216,.35),
+    rgba(122,162,255,.35),
+    rgba(255,230,107,.35)
+  );
+  filter: blur(12px);
+  opacity:.45;
+  z-index:0;
+}
+.card > *{ position:relative; z-index:1; }
+
+.grid2{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+
+.row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin:10px 0;
+}
+
+label{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  color:var(--muted);
+  font-weight:700;
+}
+
+/* ===== Inputs ===== */
 input{
-  background: rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.10);
+  border:1px solid rgba(255,255,255,.22);
   color:var(--text);
-  padding:10px 12px;
-  border-radius:12px;
+  padding:12px 12px;
+  border-radius: 14px;
   outline:none;
+  transition: transform .12s ease, border-color .2s ease, box-shadow .2s ease;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
 }
+
+input:focus{
+  border-color: rgba(46,251,213,.55);
+  box-shadow:
+    0 0 0 4px rgba(46,251,213,.18),
+    0 12px 28px rgba(0,0,0,.25);
+  transform: translateY(-1px);
+}
+
+/* ===== Buttons ===== */
 button{
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.18);
-  background: rgba(255,255,255,.06);
+  padding:11px 13px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.10);
   color:var(--text);
   cursor:pointer;
+  font-weight:800;
+  transition:
+    transform .12s ease,
+    box-shadow .2s ease,
+    background .2s ease,
+    border-color .2s ease;
+  box-shadow: 0 10px 22px rgba(0,0,0,.25);
 }
+
+button:hover{
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,.34);
+  box-shadow: 0 14px 34px rgba(0,0,0,.30);
+}
+button:active{
+  transform: translateY(0px) scale(.99);
+}
+
+/* POP primary */
 button.primary{
-  background: rgba(122,162,255,.22);
-  border-color: rgba(122,162,255,.55);
+  border-color: rgba(255,255,255,.25);
+  background:
+    linear-gradient(135deg, rgba(46,251,213,.85), rgba(255,79,216,.78));
+  box-shadow:
+    0 18px 40px rgba(255,79,216,.18),
+    0 18px 40px rgba(46,251,213,.12);
 }
-.note,.muted{ color:var(--muted); font-size:14px; }
+button.primary:hover{
+  box-shadow:
+    0 22px 50px rgba(255,79,216,.22),
+    0 22px 50px rgba(46,251,213,.16);
+}
+
+/* Small pills */
 .badge{
-  padding:6px 10px;
-  border-radius:999px;
-  background: rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.10);
+  padding:7px 11px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.10);
+  border:1px solid rgba(255,255,255,.18);
   font-size:13px;
+  font-weight:800;
+  box-shadow: 0 10px 24px rgba(0,0,0,.18);
 }
+
+/* Make badges more playful */
+.badge:nth-child(3n+1){ border-color: rgba(46,251,213,.35); }
+.badge:nth-child(3n+2){ border-color: rgba(255,79,216,.32); }
+.badge:nth-child(3n){ border-color: rgba(255,230,107,.28); }
+
+.note,.muted{
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.5;
+}
+
+/* ===== Panels ===== */
 .panel{
   padding:12px;
-  border-radius:14px;
-  background: rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.08);
+  border-radius: 16px;
+  background: rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);
   margin-bottom:12px;
+  box-shadow: 0 14px 36px rgba(0,0,0,.25);
 }
+
 .hidden{ display:none; }
-.big{ font-size:20px; font-weight:700; margin:6px 0; }
+.big{ font-size:20px; font-weight:900; margin:6px 0; }
 
 .topbar{
   display:flex;
@@ -61,126 +237,255 @@ button.primary{
   align-items:center;
   margin-bottom:12px;
 }
-.title{ font-weight:800; font-size:18px; }
-.sub{ color:var(--muted); font-size:13px; margin-top:2px; }
-.link{ color: var(--accent); text-decoration: none; }
+
+.title{
+  font-weight:1000;
+  font-size:18px;
+  letter-spacing:.3px;
+}
+.sub{
+  color:var(--muted);
+  font-size:13px;
+  margin-top:2px;
+}
+
+/* link becomes neon */
+.link{
+  color: var(--mint);
+  text-decoration:none;
+  font-weight:900;
+  padding:8px 10px;
+  border-radius: 999px;
+  border:1px solid rgba(46,251,213,.35);
+  background: rgba(46,251,213,.10);
+  transition: transform .12s ease, box-shadow .2s ease, background .2s ease;
+}
+.link:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(46,251,213,.14);
+  background: rgba(46,251,213,.14);
+}
+
 pre{
   white-space:pre-wrap;
-  background: rgba(0,0,0,.25);
+  background: rgba(0,0,0,.28);
   padding:10px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.10);
   max-height:210px;
   overflow:auto;
 }
 
-/* ===== Canvas area ===== */
-
-/* キャンバスを画面に合わせて大きく */
-.canvasWrap {
+/* =========================
+   Canvas area
+========================= */
+.canvasWrap{
   width: 100%;
-  height: min(70vh, 520px);
-  border-radius: 12px;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  max-height: min(70vh, 560px);
+  border-radius: 16px;
   overflow: hidden;
-  position: relative; /* ✅ カーソル重ねる */
+  position: relative;
+  border:1px solid rgba(255,255,255,.18);
+
+  /* cute frame */
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.85));
+  box-shadow:
+    0 28px 70px rgba(0,0,0,.30),
+    0 0 0 6px rgba(255,79,216,.10),
+    0 0 0 12px rgba(46,251,213,.08);
 }
 
-/* canvasは親にフィット */
-#canvas {
+#canvas{
   width: 100%;
   height: 100%;
-  display: block;
-
-  border-radius: 14px;
-  border:1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.94);
-
-  /* スマホ操作の要：スクロール/ズーム暴発を抑える */
+  display:block;
+  background: transparent;
   touch-action: none;
 }
 
-/* ボタンが押せない問題の定番対策 */
-button, input {
-  touch-action: manipulation;
+/* prevent mobile tap weirdness */
+button, input { touch-action: manipulation; }
+
+/* toolbar looks like bubble bar */
+.toolbar{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-bottom:10px;
+  padding:10px 10px;
+  border-radius: 16px;
+  background: rgba(0,0,0,.12);
+  border:1px solid rgba(255,255,255,.10);
 }
 
-.toolbar {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: 10px;
+.colors{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
 }
 
-.colors {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.chip {
-  padding: 8px 10px;
+/* Color chips = candy */
+.chip{
+  padding: 8px 11px;
   border-radius: 999px;
+  border:1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.10);
+  box-shadow: 0 12px 26px rgba(0,0,0,.20);
+}
+.chip:hover{
+  transform: translateY(-2px);
 }
 
-/* ✅ カラーピッカー */
+/* picker pill */
 .picker{
   display:flex;
   align-items:center;
   gap:8px;
-  padding:6px 10px;
+  padding:7px 11px;
   border-radius: 999px;
-  border:1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.10);
 }
 .picker input[type="color"]{
-  width: 36px;
-  height: 28px;
+  width: 40px;
+  height: 30px;
   padding: 0;
   border: none;
   background: transparent;
 }
 
-/* ✅ カーソル（ペン先の見える化） */
+/* Cursor dot (pen tip) */
 .cursorDot{
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
+  position:absolute;
+  left:0; top:0;
+  width:18px; height:18px;
+  border-radius:999px;
 
   border: 2px solid rgba(0,0,0,.65);
-  box-shadow: 0 0 0 2px rgba(255,255,255,.75);
-  background: rgba(255,255,255,.15);
+  box-shadow: 0 0 0 2px rgba(255,255,255,.85);
+  background: rgba(255,255,255,.18);
 
   transform: translate(-9999px, -9999px);
-  pointer-events: none;
-  z-index: 3;
+  pointer-events:none;
+  z-index:3;
 }
 
-/* 描画中の見た目（少しだけ強調） */
+/* drawing glow */
 .cursorDot.drawing{
-  box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 0 18px rgba(255,255,255,.35);
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.92),
+    0 0 18px rgba(255,79,216,.25),
+    0 0 18px rgba(46,251,213,.20);
 }
 
-/* ===== スマホ最適化：2列を1列にして、キャンバスを比率固定にする ===== */
-@media (max-width: 900px) {
-  .wrap { padding: 14px; }
-  .grid2 { grid-template-columns: 1fr; }  /* ←これが一番効く */
-
-  /* キャンバス：横幅に合わせて高さが決まる（細長くならない） */
-  .canvasWrap{
-    height: auto;           /* 70vhをやめる */
-    aspect-ratio: 4 / 3;    /* 好みで 16/9 や 1/1 でもOK */
-    max-height: 70vh;       /* 画面からはみ出し防止 */
-  }
+/* =========================
+   Responsive
+========================= */
+@media (max-width: 900px){
+  .wrap{ padding:14px; }
+  .grid2{ grid-template-columns:1fr; }
+  .toolbar{ padding:10px; }
 }
 
-/* さらに小さい端末（iPhone SEとか） */
 @media (max-width: 420px){
-  .canvasWrap{
-    aspect-ratio: 1 / 1;  /* 小画面は正方形の方が操作しやすいことが多い */
-  }
+  .canvasWrap{ aspect-ratio: 1 / 1; }
+}
+
+/* =========================
+   Small micro-animations
+========================= */
+.card, .panel, button, .badge, input, .link{
+  will-change: transform;
+}
+
+/* pop-in for panels (subtle) */
+.card, .panel{
+  animation: popIn .28s ease both;
+}
+@keyframes popIn{
+  from{ transform: translateY(6px); opacity:.0; }
+  to{ transform: translateY(0); opacity:1; }
+}
+
+
+/* =========================
+   Horizontal overflow fix
+========================= */
+
+/* 絶対に横スクロールさせない（原因調査中でも応急処置として強い） */
+html, body{
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* safe-area と padding で「実質横幅オーバー」を防ぐ */
+.wrap{
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-left:  max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+}
+
+/* グリッドやカードが横に膨らむのを防ぐ */
+.card, .panel{
+  max-width: 100%;
+}
+
+/* 2カラムが横にきつい端末で確実に1カラムへ（縦画面の横崩れ対策） */
+@media (max-width: 900px){
+  .grid2{ grid-template-columns: 1fr; }
+}
+
+/* row内の要素がはみ出すのを止める：折り返し + つぶれ許可 */
+.row{
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* input / button / pre が横幅を壊す定番を潰す */
+input, button, pre{
+  max-width: 100%;
+  min-width: 0;          /* これが超重要 */
+}
+
+/* 長いボタン文言で横に伸びないようにする */
+button{
+  white-space: normal;   /* 折り返し許可 */
+  word-break: break-word;
+}
+
+/* ツールバー・色チップが横に伸びすぎないようにする */
+.toolbar, .colors{
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* チップが横に伸びて押し出すのを防ぐ */
+.chip{
+  max-width: 100%;
+  white-space: nowrap;   /* 短い文字なら1行でOK */
+}
+
+/* ログ(pre)が長い文字列で横に伸びるのを防ぐ（これも定番原因） */
+pre{
+  overflow-x: auto;      /* 横に伸びず中だけスクロール */
+  word-break: break-word;
+}
+
+/* キャンバス周りが横に溢れないように */
+.canvasWrap{
+  width: 100%;
+  max-width: 100%;
+}
+#canvas{
+  width: 100%;
+  max-width: 100%;
+  display: block;
 }
