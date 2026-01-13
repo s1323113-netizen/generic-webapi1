@@ -13,8 +13,11 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.static('public'));
 
 // 設定をコードで定義（あなたの今の環境のままでOK）
-const PROVIDER = 'openai';       // 'openai' or 'gemini'
-const MODEL = 'gpt-4o-mini';     // OpenAI: 'gpt-4o-mini', Gemini: 'gemini-2.5-flash'
+//const PROVIDER = 'openai';       // 'openai' or 'gemini'
+//const MODEL = 'gpt-4o-mini';     // OpenAI: 'gpt-4o-mini', Gemini: 'gemini-2.5-flash'
+
+const PROVIDER = 'gemini';
+const MODEL = 'gemini-2.5-flash';
 
 let promptTemplate;
 try {
